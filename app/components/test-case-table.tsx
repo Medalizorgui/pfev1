@@ -1,340 +1,319 @@
 "use client"
 
-import { useState } from "react"
-import { useTestCases } from "../hooks/use-test-cases"
-import type { TestCase, TestStep } from "../types/test-cases"
+import React, { useState } from "react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronDown, ChevronUp, Search, SortAsc, SortDesc } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Card } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import React from "react"
+import { Edit, Trash2, Plus, ChevronDown, ChevronRight, FileDown } from "lucide-react"
+import { useTestCases } from "@/app/hooks/use-test-cases"
+import { TestCase, TestStep } from "@/app/types/test-cases"
+import { EditTestCaseDialog } from "@/app/components/edit-test-case-dialog"
+import { EditTestStepDialog } from "./edit-test-step-dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 
-export function TestCaseTable() {
-  const { testCases, isLoading } = useTestCases()
-  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({})
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string | null>(null)
-  const [importanceFilter, setImportanceFilter] = useState<string | null>(null)
-  const [sortField, setSortField] = useState<string | null>("id")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+interface TestCaseTableProps {
+  testSuiteId: string
+}
 
-  const toggleRow = (id: number) => {
-    setExpandedRows((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }))
-  }
+export function TestCaseTable({ testSuiteId }: TestCaseTableProps) {
+  const { testCases, isLoading, error } = useTestCases(testSuiteId)
+  const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null)
+  const [selectedTestStep, setSelectedTestStep] = useState<TestStep | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isEditStepDialogOpen, setIsEditStepDialogOpen] = useState(false)
+  const [expandedTestCases, setExpandedTestCases] = useState<Set<number>>(new Set())
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRows(new Set(testCases.map(tc => tc.id)))
     } else {
-      setSortField(field)
-      setSortDirection("asc")
+      setSelectedRows(new Set())
     }
   }
 
-  const filteredTestCases = testCases
-    .filter((testCase) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        testCase.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        testCase.summary.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleSelectRow = (testCaseId: number, checked: boolean) => {
+    const newSelected = new Set(selectedRows)
+    if (checked) {
+      newSelected.add(testCaseId)
+    } else {
+      newSelected.delete(testCaseId)
+    }
+    setSelectedRows(newSelected)
+  }
 
-      const matchesStatus = !statusFilter || testCase.status === statusFilter
+  const handleExportToXML = async () => {
+    if (selectedRows.size === 0) {
+      alert('Please select at least one test case to export')
+      return
+    }
 
-      const matchesImportance = !importanceFilter || testCase.importance === importanceFilter
+    const selectedTestCases = testCases.filter(tc => selectedRows.has(tc.id))
+    const data = {
+      test_suite_id: testSuiteId,
+      test_cases: selectedTestCases
+    }
 
-      return matchesSearch && matchesStatus && matchesImportance
-    })
-    .sort((a, b) => {
-      if (!sortField) return 0
+    try {
+      const response = await fetch('/api/export-to-n8n', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
 
-      const fieldA = a[sortField as keyof TestCase]
-      const fieldB = b[sortField as keyof TestCase]
-
-      if (typeof fieldA === "string" && typeof fieldB === "string") {
-        return sortDirection === "asc" ? fieldA.localeCompare(fieldB) : fieldB.localeCompare(fieldA)
+      if (!response.ok) {
+        throw new Error('Failed to export to XML')
       }
 
-      if (typeof fieldA === "number" && typeof fieldB === "number") {
-        return sortDirection === "asc" ? fieldA - fieldB : fieldB - fieldA
+      const result = await response.json()
+      alert('Successfully sent to n8n workflow')
+    } catch (error) {
+      console.error('Error exporting to XML:', error)
+      alert('Failed to export to XML')
+    }
+  }
+
+  const handleEdit = (testCase: TestCase) => {
+    setSelectedTestCase(testCase)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleDelete = async (testCaseId: number) => {
+    if (!confirm('Are you sure you want to delete this test case?')) return
+
+    try {
+      const response = await fetch(`/api/test-cases/${testCaseId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete test case')
       }
 
-      return 0
+      window.location.reload()
+    } catch (error) {
+      console.error('Error deleting test case:', error)
+      alert('Failed to delete test case')
+    }
+  }
+
+  const handleEditStep = (testStep: TestStep) => {
+    setSelectedTestStep(testStep)
+    setIsEditStepDialogOpen(true)
+  }
+
+  const handleDeleteStep = async (testStepId: number) => {
+    if (!confirm('Are you sure you want to delete this test step?')) return
+
+    try {
+      const response = await fetch(`/api/test-steps/${testStepId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete test step')
+      }
+
+      window.location.reload()
+    } catch (error) {
+      console.error('Error deleting test step:', error)
+      alert('Failed to delete test step')
+    }
+  }
+
+  const handleAddStep = (testCaseId: number) => {
+    setSelectedTestStep({
+      id: 0,
+      test_case_id: testCaseId,
+      step_number: 0,
+      step_action: "",
+      expected_result: "",
+      execution_type: "Manual"
     })
+    setIsEditStepDialogOpen(true)
+  }
+
+  const toggleTestCase = (testCaseId: number) => {
+    const newExpanded = new Set(expandedTestCases)
+    if (newExpanded.has(testCaseId)) {
+      newExpanded.delete(testCaseId)
+    } else {
+      newExpanded.add(testCaseId)
+    }
+    setExpandedTestCases(newExpanded)
+  }
 
   if (isLoading) {
-    return <LoadingState />
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <div className="text-muted-foreground">Loading test cases...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <div className="text-destructive">{error}</div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search test cases..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Select value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Passed">Passed</SelectItem>
-              <SelectItem value="Failed">Failed</SelectItem>
-              <SelectItem value="Blocked">Blocked</SelectItem>
-              <SelectItem value="Not Run">Not Run</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={importanceFilter || ""} onValueChange={(value) => setImportanceFilter(value || null)}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Importance" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Importance</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+    <>
+      <div className="flex justify-end mb-4">
+        <Button onClick={handleExportToXML} disabled={selectedRows.size === 0}>
+          <FileDown className="mr-2 h-4 w-4" />
+          Export to XML
+        </Button>
       </div>
-
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10"></TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("id")}>
-                  ID
-                  {sortField === "id" && (
-                    <span className="ml-1 inline-block">
-                      {sortDirection === "asc" ? (
-                        <SortAsc className="h-3 w-3 inline" />
-                      ) : (
-                        <SortDesc className="h-3 w-3 inline" />
-                      )}
-                    </span>
-                  )}
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("title")}>
-                  Title
-                  {sortField === "title" && (
-                    <span className="ml-1 inline-block">
-                      {sortDirection === "asc" ? (
-                        <SortAsc className="h-3 w-3 inline" />
-                      ) : (
-                        <SortDesc className="h-3 w-3 inline" />
-                      )}
-                    </span>
-                  )}
-                </TableHead>
-                <TableHead>Summary</TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
-                  Status
-                  {sortField === "status" && (
-                    <span className="ml-1 inline-block">
-                      {sortDirection === "asc" ? (
-                        <SortAsc className="h-3 w-3 inline" />
-                      ) : (
-                        <SortDesc className="h-3 w-3 inline" />
-                      )}
-                    </span>
-                  )}
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("importance")}>
-                  Importance
-                  {sortField === "importance" && (
-                    <span className="ml-1 inline-block">
-                      {sortDirection === "asc" ? (
-                        <SortAsc className="h-3 w-3 inline" />
-                      ) : (
-                        <SortDesc className="h-3 w-3 inline" />
-                      )}
-                    </span>
-                  )}
-                </TableHead>
-                <TableHead>Execution Type</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTestCases.length === 0 ? (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={selectedRows.size === testCases.length}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
+              <TableHead className="w-[50px]"></TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Importance</TableHead>
+              <TableHead>Execution Type</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {testCases.map((testCase) => (
+              <React.Fragment key={testCase.id}>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10">
-                    No test cases found. Try adjusting your filters.
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedRows.has(testCase.id)}
+                      onCheckedChange={(checked) => handleSelectRow(testCase.id, checked as boolean)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => toggleTestCase(testCase.id)}
+                    >
+                      {expandedTestCases.has(testCase.id) ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableCell>
+                  <TableCell>{testCase.title}</TableCell>
+                  <TableCell>{testCase.status}</TableCell>
+                  <TableCell>{testCase.importance}</TableCell>
+                  <TableCell>{testCase.execution_type}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleAddStep(testCase.id)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(testCase)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(testCase.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ) : (
-                filteredTestCases.map((testCase) => (
-                  <React.Fragment key={testCase.id}>
-                    <TableRow
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => toggleRow(testCase.id)}
-                    >
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            toggleRow(testCase.id)
-                          }}
-                        >
-                          {expandedRows[testCase.id] ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TableCell>
-                      <TableCell className="font-medium">{testCase.id}</TableCell>
-                      <TableCell>{testCase.title}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{testCase.summary}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={testCase.status} />
-                      </TableCell>
-                      <TableCell>
-                        <ImportanceBadge importance={testCase.importance} />
-                      </TableCell>
-                      <TableCell>{testCase.execution_type}</TableCell>
-                    </TableRow>
-                    {expandedRows[testCase.id] && (
-                      <TableRow className="bg-muted/30">
-                        <TableCell colSpan={7} className="p-0">
-                          <div className="p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                              <div>
-                                <h4 className="font-semibold mb-1">Precondition</h4>
-                                <p className="text-sm text-muted-foreground">{testCase.precondition}</p>
-                              </div>
-                              <div>
-                                <h4 className="font-semibold mb-1">Postcondition</h4>
-                                <p className="text-sm text-muted-foreground">{testCase.postcondition}</p>
-                              </div>
-                            </div>
-                            <h4 className="font-semibold mb-2">Test Steps</h4>
-                            <TestStepsTable testSteps={testCase.test_steps} />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-function TestStepsTable({ testSteps }: { testSteps: TestStep[] }) {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-16">Step #</TableHead>
-          <TableHead>Action</TableHead>
-          <TableHead>Expected Result</TableHead>
-          <TableHead className="w-32">Execution Type</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {testSteps.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={4} className="text-center py-4">
-              No test steps found for this test case.
-            </TableCell>
-          </TableRow>
-        ) : (
-          testSteps.map((step) => (
-            <TableRow key={step.id}>
-              <TableCell className="font-medium">{step.step_number}</TableCell>
-              <TableCell>{step.step_action}</TableCell>
-              <TableCell>{step.expected_result}</TableCell>
-              <TableCell>{step.execution_type}</TableCell>
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  let variant: "default" | "secondary" | "destructive" | "outline" = "default"
-
-  switch (status.toLowerCase()) {
-    case "passed":
-      variant = "default"
-      break
-    case "failed":
-      variant = "destructive"
-      break
-    case "blocked":
-      variant = "secondary"
-      break
-    case "not run":
-      variant = "outline"
-      break
-  }
-
-  return <Badge variant={variant}>{status}</Badge>
-}
-
-function ImportanceBadge({ importance }: { importance: string }) {
-  let variant: "default" | "secondary" | "destructive" | "outline" = "secondary"
-
-  switch (importance.toLowerCase()) {
-    case "high":
-      variant = "destructive"
-      break
-    case "medium":
-      variant = "default"
-      break
-    case "low":
-      variant = "secondary"
-      break
-  }
-
-  return <Badge variant={variant}>{importance}</Badge>
-}
-
-function LoadingState() {
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between">
-        <Skeleton className="h-10 w-64" />
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-10 w-32" />
-        </div>
+                {expandedTestCases.has(testCase.id) && (
+                  <TableRow>
+                    <TableCell colSpan={7}>
+                      <div className="pl-8">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[100px]">Step #</TableHead>
+                              <TableHead>Action</TableHead>
+                              <TableHead>Expected Result</TableHead>
+                              <TableHead>Execution Type</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {testCase.test_steps.map((step) => (
+                              <TableRow key={step.id}>
+                                <TableCell>{step.step_number}</TableCell>
+                                <TableCell>{step.step_action}</TableCell>
+                                <TableCell>{step.expected_result}</TableCell>
+                                <TableCell>{step.execution_type}</TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleEditStep(step)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDeleteStep(step.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </React.Fragment>
+            ))}
+          </TableBody>
+        </Table>
       </div>
-      <Card>
-        <div className="p-4">
-          <div className="space-y-2">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
-      </Card>
-    </div>
+
+      {selectedTestCase && (
+        <EditTestCaseDialog
+          testCase={selectedTestCase}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+        />
+      )}
+
+      {selectedTestStep && (
+        <EditTestStepDialog
+          testStep={selectedTestStep}
+          open={isEditStepDialogOpen}
+          onOpenChange={setIsEditStepDialogOpen}
+        />
+      )}
+    </>
   )
 }

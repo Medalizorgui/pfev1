@@ -130,7 +130,7 @@ export function TestSuiteDetails() {
         </div>
       </div>
 
-      <TestCaseTable />
+      <TestCaseTable testSuiteId={testSuiteId} />
 
       {childSuites.length > 0 && (
         <div className="space-y-4">
