@@ -110,13 +110,14 @@ export function TestSuiteList() {
                     Created on {new Date(suite.created_at).toLocaleDateString()}
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
+                <CardFooter className="flex justify-between items-center">
                   <div className="text-sm text-muted-foreground">
                     {suite.parent_suite_id ? "Child suite" : "Root suite"}
                   </div>
                   <Button 
                     variant="outline" 
                     size="sm"
+                    className="z-10"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();

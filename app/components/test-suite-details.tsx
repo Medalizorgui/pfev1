@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Edit, Trash2, ArrowLeft } from "lucide-react"
+import { Edit, Trash2, ArrowLeft, FileCode } from "lucide-react"
 import { CreateTestSuiteDialog } from "./create-test-suite-dialog"
 import { TestCaseTable } from "./test-case-table"
 import Link from "next/link"
@@ -148,6 +148,20 @@ export function TestSuiteDetails() {
                       Created on {new Date(suite.created_at).toLocaleDateString()}
                     </div>
                   </CardContent>
+                  <CardFooter className="flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.location.href = `/projects/${projectId}/test-suites/${suite.id}/xml`;
+                      }}
+                    >
+                      <FileCode className="mr-2 h-4 w-4" />
+                      View XML
+                    </Button>
+                  </CardFooter>
                 </Card>
               </Link>
             ))}
