@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
-import { FileText } from "lucide-react"
+import { FileText, FileCode } from "lucide-react"
 import Link from "next/link"
 import { CreateTestSuiteDialog } from "./create-test-suite-dialog"
+import { Button } from "@/components/ui/button"
 
 interface TestSuite {
   id: string
@@ -92,10 +93,16 @@ export function TestSuiteList() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredTestSuites.map((suite) => (
-            <Link key={suite.id} href={`/projects/${projectId}/test-suites/${suite.id}`} className="group">
+            <Link 
+              key={suite.id} 
+              href={`/projects/${projectId}/test-suites/${suite.id}`}
+              className="group block"
+            >
               <Card className="h-full transition-all hover:shadow-md">
                 <CardHeader>
-                  <CardTitle className="group-hover:text-primary">{suite.name}</CardTitle>
+                  <CardTitle className="group-hover:text-primary">
+                    {suite.name}
+                  </CardTitle>
                   <CardDescription>{suite.details}</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -103,8 +110,22 @@ export function TestSuiteList() {
                     Created on {new Date(suite.created_at).toLocaleDateString()}
                   </div>
                 </CardContent>
-                <CardFooter className="text-sm text-muted-foreground">
-                  {suite.parent_suite_id ? "Child suite" : "Root suite"}
+                <CardFooter className="flex justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    {suite.parent_suite_id ? "Child suite" : "Root suite"}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.location.href = `/projects/${projectId}/test-suites/${suite.id}/xml`;
+                    }}
+                  >
+                    <FileCode className="mr-2 h-4 w-4" />
+                    View XML
+                  </Button>
                 </CardFooter>
               </Card>
             </Link>

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 
 function GenerateTestCasesButton({ validatedStories, selectedStories }: { validatedStories: UserStory[], selectedStories: string[] }) {
   const params = useParams();
@@ -673,10 +674,16 @@ export default function UserStoriesPage() {
   }
 
   const handleSelectAll = (checked: boolean) => {
+    const storiesToSelect = filteredUserStories.filter(story => 
+      activeTab === "validated" ? story.status === "validated" : story.status === "on_hold"
+    );
+    
     if (checked) {
-      setSelectedStories(filteredUserStories.map((story) => story.id))
+      setSelectedStories([...new Set([...selectedStories, ...storiesToSelect.map(story => story.id)])]);
     } else {
-      setSelectedStories([])
+      setSelectedStories(selectedStories.filter(id => 
+        !storiesToSelect.some(story => story.id === id)
+      ));
     }
   }
 
@@ -769,43 +776,67 @@ export default function UserStoriesPage() {
         </TabsList>
         <TabsContent value="on_hold" className="mt-4">
           <div className="grid gap-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Checkbox
+                id="select-all-on-hold"
+                checked={filteredUserStories.filter(story => story.status === "on_hold").every(story => selectedStories.includes(story.id))}
+                onCheckedChange={handleSelectAll}
+              />
+              <Label htmlFor="select-all-on-hold" className="text-sm font-normal">
+                Select All On Hold
+              </Label>
+            </div>
             {isLoading ? (
               <div className="text-center py-8">Loading user stories...</div>
-            ) : filteredUserStories.length === 0 ? (
+            ) : filteredUserStories.filter(story => story.status === "on_hold").length === 0 ? (
               <div className="text-center py-8">No on hold user stories found.</div>
             ) : (
-              filteredUserStories.map((story) => (
-                <UserStoryCard
-                  key={story.id}
-                  story={story}
-                  onEdit={() => handleEditClick(story)}
-                  onDelete={() => handleDeleteUserStory(story.id)}
-                  onValidate={() => handleValidateUserStory(story.id)}
-                  onSelect={(checked) => handleSelectStory(story.id, checked)}
-                  isSelected={selectedStories.includes(story.id)}
-                />
-              ))
+              filteredUserStories
+                .filter(story => story.status === "on_hold")
+                .map((story) => (
+                  <UserStoryCard
+                    key={story.id}
+                    story={story}
+                    onEdit={() => handleEditClick(story)}
+                    onDelete={() => handleDeleteUserStory(story.id)}
+                    onValidate={() => handleValidateUserStory(story.id)}
+                    onSelect={(checked) => handleSelectStory(story.id, checked)}
+                    isSelected={selectedStories.includes(story.id)}
+                  />
+                ))
             )}
           </div>
         </TabsContent>
         <TabsContent value="validated" className="mt-4">
           <div className="grid gap-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Checkbox
+                id="select-all-validated"
+                checked={filteredUserStories.filter(story => story.status === "validated").every(story => selectedStories.includes(story.id))}
+                onCheckedChange={handleSelectAll}
+              />
+              <Label htmlFor="select-all-validated" className="text-sm font-normal">
+                Select All Validated
+              </Label>
+            </div>
             {isLoading ? (
               <div className="text-center py-8">Loading user stories...</div>
-            ) : filteredUserStories.length === 0 ? (
+            ) : filteredUserStories.filter(story => story.status === "validated").length === 0 ? (
               <div className="text-center py-8">No validated user stories found.</div>
             ) : (
-              filteredUserStories.map((story) => (
-                <UserStoryCard
-                  key={story.id}
-                  story={story}
-                  onEdit={() => handleEditClick(story)}
-                  onDelete={() => handleDeleteUserStory(story.id)}
-                  onValidate={() => handleValidateUserStory(story.id)}
-                  onSelect={(checked) => handleSelectStory(story.id, checked)}
-                  isSelected={selectedStories.includes(story.id)}
-                />
-              ))
+              filteredUserStories
+                .filter(story => story.status === "validated")
+                .map((story) => (
+                  <UserStoryCard
+                    key={story.id}
+                    story={story}
+                    onEdit={() => handleEditClick(story)}
+                    onDelete={() => handleDeleteUserStory(story.id)}
+                    onValidate={() => handleValidateUserStory(story.id)}
+                    onSelect={(checked) => handleSelectStory(story.id, checked)}
+                    isSelected={selectedStories.includes(story.id)}
+                  />
+                ))
             )}
           </div>
         </TabsContent>
