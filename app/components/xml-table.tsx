@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Download } from "lucide-react"
+import { Download, Plus } from "lucide-react"
 
 interface TestLinkExport {
   id: number
@@ -21,6 +21,7 @@ export default function XmlTable({ testSuiteId }: XmlTableProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [downloading, setDownloading] = useState<number | null>(null)
+  const [generating, setGenerating] = useState(false)
 
   useEffect(() => {
     const fetchExports = async () => {
@@ -69,6 +70,34 @@ export default function XmlTable({ testSuiteId }: XmlTableProps) {
     }
   }
 
+  const handleGenerateXml = async () => {
+    setGenerating(true)
+    setError(null)
+    
+    try {
+      const response = await fetch('/api/generate-testlink-xml', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ testSuiteId }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to generate XML')
+      }
+
+      const newExport = await response.json()
+      setExports(prevExports => [newExport, ...prevExports])
+    } catch (error) {
+      console.error('Error generating XML:', error)
+      setError(error instanceof Error ? error.message : 'Failed to generate XML')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-[400px] items-center justify-center">
@@ -95,7 +124,26 @@ export default function XmlTable({ testSuiteId }: XmlTableProps) {
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-6">Test Suite Exports</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Test Suite Exports</h1>
+        <Button
+          onClick={handleGenerateXml}
+          disabled={generating}
+          className="flex items-center gap-2"
+        >
+          {generating ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" />
+              Generate XML
+            </>
+          )}
+        </Button>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

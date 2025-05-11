@@ -54,30 +54,26 @@ export function TestCaseTable({ testSuiteId }: TestCaseTableProps) {
       return
     }
 
-    const selectedTestCases = testCases.filter(tc => selectedRows.has(tc.id))
-    const data = {
-      test_suite_id: testSuiteId,
-      test_cases: selectedTestCases
-    }
-
     try {
       const response = await fetch('/api/export-to-n8n', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ test_suite_id: testSuiteId }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to export to XML')
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to generate XML')
       }
 
       const result = await response.json()
-      alert('Successfully sent to n8n workflow')
+      alert('Successfully generated XML export')
+      window.location.reload() // Refresh to show the new export
     } catch (error) {
-      console.error('Error exporting to XML:', error)
-      alert('Failed to export to XML')
+      console.error('Error generating XML:', error)
+      alert('Failed to generate XML')
     }
   }
 

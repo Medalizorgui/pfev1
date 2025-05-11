@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server'
+import pool from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const { test_suite_id } = await request.json();
+    const { testSuiteId } = await request.json()
 
-    if (!test_suite_id) {
+    if (!testSuiteId) {
       return NextResponse.json(
         { error: 'test_suite_id is required' },
         { status: 400 }
@@ -14,15 +14,15 @@ export async function POST(request: NextRequest) {
 
     // Fetch test cases and their steps from the database
     const testCasesQuery = `
-      SELECT tc.id, tc.title as name, tc.summary, tc.precondition as preconditions, tc.execution_type, tc.importance,
-             ts.step_number, ts.step_action as actions, ts.expected_result as expected_results, ts.execution_type as step_execution_type
+      SELECT tc.id, tc.name, tc.summary, tc.preconditions, tc.execution_type, tc.importance,
+             ts.step_number, ts.actions, ts.expected_results, ts.execution_type as step_execution_type
       FROM test_cases tc
       LEFT JOIN test_steps ts ON tc.id = ts.test_case_id
       WHERE tc.test_suite_id = $1
       ORDER BY tc.id, ts.step_number
     `
 
-    const result = await pool.query(testCasesQuery, [test_suite_id])
+    const result = await pool.query(testCasesQuery, [testSuiteId])
     
     // Group test cases and their steps
     const testCases = new Map()
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
       if (testCase.steps.length > 0) {
         xml += '    <steps>\n'
-        testCase.steps.forEach((step: any) => {
+        testCase.steps.forEach(step => {
           xml += '      <step>\n'
           xml += `        <step_number>${step.step_number}</step_number>\n`
           xml += `        <actions>${escapeXml(step.actions)}</actions>\n`
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       RETURNING id, test_suite_id, xml_file, created_at
     `
 
-    const insertResult = await pool.query(insertQuery, [test_suite_id, xml])
+    const insertResult = await pool.query(insertQuery, [testSuiteId, xml])
     
     return NextResponse.json(insertResult.rows[0])
   } catch (error) {
