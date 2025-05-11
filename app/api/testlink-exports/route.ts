@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     const query = `
-      SELECT id, test_suite_id, xml_file, created_at
+      SELECT id, test_suite_id, xml_file, excel_file_path, created_at
       FROM testlink_exports
       WHERE test_suite_id = $1
       ORDER BY created_at DESC

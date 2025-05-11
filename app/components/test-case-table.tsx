@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Edit, Trash2, Plus, ChevronDown, ChevronRight, FileDown } from "lucide-react"
+import { Edit, Trash2, Plus, ChevronDown, ChevronRight, FileDown, FileSpreadsheet } from "lucide-react"
 import { useTestCases } from "@/app/hooks/use-test-cases"
 import { TestCase, TestStep } from "@/app/types/test-cases"
 import { EditTestCaseDialog } from "@/app/components/edit-test-case-dialog"
@@ -46,6 +46,35 @@ export function TestCaseTable({ testSuiteId }: TestCaseTableProps) {
       newSelected.delete(testCaseId)
     }
     setSelectedRows(newSelected)
+  }
+
+  const handleExportToExcel = async () => {
+    if (selectedRows.size === 0) {
+      alert('Please select at least one test case to export')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/export-to-excel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ test_suite_id: testSuiteId }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to generate Excel')
+      }
+
+      const result = await response.json()
+      alert('Successfully generated Excel export')
+      window.location.reload() // Refresh to show the new export
+    } catch (error) {
+      console.error('Error generating Excel:', error)
+      alert('Failed to generate Excel')
+    }
   }
 
   const handleExportToXML = async () => {
@@ -165,7 +194,11 @@ export function TestCaseTable({ testSuiteId }: TestCaseTableProps) {
 
   return (
     <>
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end gap-2 mb-4">
+        <Button onClick={handleExportToExcel} disabled={selectedRows.size === 0}>
+          <FileSpreadsheet className="mr-2 h-4 w-4" />
+          Export to Excel
+        </Button>
         <Button onClick={handleExportToXML} disabled={selectedRows.size === 0}>
           <FileDown className="mr-2 h-4 w-4" />
           Export to XML
