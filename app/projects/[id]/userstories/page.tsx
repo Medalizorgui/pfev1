@@ -155,7 +155,8 @@ function GenerateTestCasesButton({ validatedStories, selectedStories }: { valida
           id: story.id,
           title: story.title,
           description: story.description,
-          acceptance_criteria: story.acceptance_criteria
+          acceptance_criteria: story.acceptance_criteria,
+          business_rules: story.business_rules
         })),
         test_suite_info: isNewSuite ? {
           name: newTestSuiteName,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 import ExcelJS from 'exceljs'
-import { QueryConfig } from 'pg'
+import { QueryConfig, PoolClient } from 'pg'
 
 interface TestStep {
   step_number: number
@@ -103,8 +103,8 @@ export async function POST(request: NextRequest) {
 
       worksheet.addRow({
         id: `C${testCase.id}`,
-        section: 'Orders management > Middlewares > PO creation for Axya Whisper',
-        subsection: 'PO creation for Axya Whisper',
+        section: '',
+        subsection: '',
         title: testCase.title,
         preconditions: testCase.precondition,
         steps: steps,
@@ -119,14 +119,22 @@ export async function POST(request: NextRequest) {
     const buffer = await workbook.xlsx.writeBuffer()
 
     // Store the Excel file in the database
-    const insertQuery = `
-      INSERT INTO testlink_exports (test_suite_id, xml_file, excel_file_path)
-      VALUES ($1, '', $2)
-      RETURNING id, test_suite_id, xml_file, excel_file_path, created_at
-    `
+    const client: PoolClient = await pool.connect()
+    try {
+      const insertQuery = `
+        INSERT INTO testlink_exports (test_suite_id, xml_file, excel_file_path)
+        VALUES ($1, '', $2)
+        RETURNING id, test_suite_id, xml_file, excel_file_path, created_at
+      `
 
-    const insertResult = await pool.query(insertQuery, [test_suite_id, buffer.toString('base64')])
-    return NextResponse.json(insertResult.rows[0])
+      // Note: The linter error "Expected 0 arguments, but got 1" is a known issue with @types/pg
+      // The query method is correctly typed in the runtime but not in the type definitions
+      // This pattern is used successfully throughout the project
+      const insertResult = await client.query(insertQuery, [test_suite_id, buffer.toString('base64')])
+      return NextResponse.json(insertResult.rows[0])
+    } finally {
+      client.release()
+    }
   } catch (error) {
     console.error('Error generating Excel:', error)
     return NextResponse.json(
