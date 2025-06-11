@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import pool from "@/lib/db"
-
+ 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -13,14 +13,14 @@ export async function GET(
          WHERE test_suite_id = $1`,
         [params.id]
       )
-
+ 
       if (result.rows.length === 0) {
         return NextResponse.json(
           { error: "Test suite configuration not found" },
           { status: 404 }
         )
       }
-
+ 
       return NextResponse.json(result.rows[0])
     } finally {
       client.release()
@@ -33,14 +33,14 @@ export async function GET(
     )
   }
 }
-
+ 
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
     const body = await request.json()
-    const { 
+    const {
       test_framework,
       programming_language,
       test_runner,
@@ -51,7 +51,7 @@ export async function POST(
       retry_count,
       parallel_execution
     } = body
-
+ 
     const client = await pool.connect()
     try {
       // Check if configuration already exists
@@ -60,14 +60,14 @@ export async function POST(
          WHERE test_suite_id = $1`,
         [params.id]
       )
-
+ 
       if (existingConfig.rows.length > 0) {
         return NextResponse.json(
           { error: "Configuration already exists for this test suite" },
           { status: 400 }
         )
       }
-
+ 
       const result = await client.query(
         `INSERT INTO test_suite_configs (
           test_suite_id,
@@ -95,7 +95,7 @@ export async function POST(
           parallel_execution || false
         ]
       )
-
+ 
       return NextResponse.json(result.rows[0])
     } finally {
       client.release()
@@ -108,14 +108,14 @@ export async function POST(
     )
   }
 }
-
+ 
 export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
     const body = await request.json()
-    const { 
+    const {
       test_framework,
       programming_language,
       test_runner,
@@ -126,7 +126,7 @@ export async function PUT(
       retry_count,
       parallel_execution
     } = body
-
+ 
     const client = await pool.connect()
     try {
       const result = await client.query(
@@ -155,14 +155,14 @@ export async function PUT(
           params.id
         ]
       )
-
+ 
       if (result.rows.length === 0) {
         return NextResponse.json(
           { error: "Test suite configuration not found" },
           { status: 404 }
         )
       }
-
+ 
       return NextResponse.json(result.rows[0])
     } finally {
       client.release()
@@ -174,4 +174,4 @@ export async function PUT(
       { status: 500 }
     )
   }
-} 
+}

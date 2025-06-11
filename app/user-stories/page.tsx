@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Plus, Check, ArrowUpDown, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,7 +23,8 @@ import type { UserStory } from "./types"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
-export default function UserStoriesPage() {
+// Separate component for the content that uses useSearchParams
+function UserStoriesContent() {
   const searchParams = useSearchParams()
   const projectId = searchParams.get("project_id")
   
@@ -401,5 +402,27 @@ export default function UserStoriesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// Loading component for the Suspense fallback
+function LoadingUserStories() {
+  return (
+    <div className="container mx-auto py-8">
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading user stories...</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Main component with Suspense boundary
+export default function UserStoriesPage() {
+  return (
+    <Suspense fallback={<LoadingUserStories />}>
+      <UserStoriesContent />
+    </Suspense>
   )
 }

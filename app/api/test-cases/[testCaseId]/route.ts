@@ -4,10 +4,10 @@ import pool from '@/lib/db'; // Adjust the import path as necessary
 // GET: Fetch a single test case
 export async function GET(
   request: NextRequest,
-  { params }: { params: { testCaseId: string } }
+  context: { params: Promise<{ testCaseId: string }> }
 ) {
   try {
-    const testCaseId = params.testCaseId;
+    const { testCaseId } = await context.params;
 
     const query = `
       SELECT 
@@ -104,10 +104,10 @@ export async function POST(request: NextRequest) {
 // PUT: Update an existing test case
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { testCaseId: string } }
+  context: { params: Promise<{ testCaseId: string }> }
 ) {
   try {
-    const testCaseId = params.testCaseId;
+    const { testCaseId } = await context.params;
     const body = await request.json();
     
     const {
@@ -203,10 +203,10 @@ export async function PUT(
 // DELETE: Delete a test case
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { testCaseId: string } }
+  context: { params: Promise<{ testCaseId: string }> }
 ) {
   try {
-    const testCaseId = params.testCaseId;
+    const { testCaseId } = await context.params;
     
     console.log("Delete API called with testCaseId:", testCaseId);
 
