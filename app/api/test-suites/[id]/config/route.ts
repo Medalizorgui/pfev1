@@ -3,15 +3,16 @@ import pool from "@/lib/db"
  
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const client = await pool.connect()
     try {
       const result = await client.query(
         `SELECT * FROM test_suite_configs
          WHERE test_suite_id = $1`,
-        [params.id]
+        [id]
       )
  
       if (result.rows.length === 0) {
@@ -36,9 +37,10 @@ export async function GET(
  
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const {
       test_framework,
@@ -58,7 +60,7 @@ export async function POST(
       const existingConfig = await client.query(
         `SELECT * FROM test_suite_configs
          WHERE test_suite_id = $1`,
-        [params.id]
+        [id]
       )
  
       if (existingConfig.rows.length > 0) {
@@ -83,7 +85,7 @@ export async function POST(
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
-          params.id,
+          id,
           test_framework,
           programming_language,
           test_runner,
@@ -111,9 +113,10 @@ export async function POST(
  
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const {
       test_framework,
@@ -152,7 +155,7 @@ export async function PUT(
           timeout || 300,
           retry_count || 0,
           parallel_execution || false,
-          params.id
+          id
         ]
       )
  

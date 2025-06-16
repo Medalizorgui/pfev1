@@ -117,20 +117,21 @@ export async function POST(request: NextRequest) {
 
     // Generate Excel file
     const buffer = await workbook.xlsx.writeBuffer()
+    const base64Data = Buffer.from(buffer).toString('base64')
 
     // Store the Excel file in the database
     const client: PoolClient = await pool.connect()
     try {
-      const insertQuery = `
-        INSERT INTO testlink_exports (test_suite_id, xml_file, excel_file_path)
-        VALUES ($1, '', $2)
-        RETURNING id, test_suite_id, xml_file, excel_file_path, created_at
-      `
+      const insertQuery: QueryConfig = {
+        text: `
+          INSERT INTO testlink_exports (test_suite_id, xml_file, excel_file_path)
+          VALUES ($1, '', $2)
+          RETURNING id, test_suite_id, xml_file, excel_file_path, created_at
+        `,
+        values: [test_suite_id, base64Data]
+      }
 
-      // Note: The linter error "Expected 0 arguments, but got 1" is a known issue with @types/pg
-      // The query method is correctly typed in the runtime but not in the type definitions
-      // This pattern is used successfully throughout the project
-      const insertResult = await client.query(insertQuery, [test_suite_id, buffer.toString('base64')])
+      const insertResult = await client.query(insertQuery)
       return NextResponse.json(insertResult.rows[0])
     } finally {
       client.release()
@@ -142,4 +143,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-} 
+}
