@@ -4,10 +4,10 @@ import pool from '@/lib/db';
 // GET: Fetch a single test step
 export async function GET(
   request: NextRequest,
-  context: { params: { testStepId: string } }
+  context: { params: Promise<{ testStepId: string }> }
 ) {
   try {
-    const testStepId = context.params.testStepId;
+    const { testStepId } = await context.params;
     const query = `
       SELECT 
         id,
@@ -41,10 +41,10 @@ export async function GET(
 // PUT: Update a test step
 export async function PUT(
   request: NextRequest,
-  context: { params: { testStepId: string } }
+  context: { params: Promise<{ testStepId: string }> }
 ) {
   try {
-    const testStepId = context.params.testStepId;
+    const { testStepId } = await context.params;
     const body = await request.json();
     const {
       step_number,
@@ -96,10 +96,10 @@ export async function PUT(
 // DELETE: Delete a test step
 export async function DELETE(
   request: NextRequest,
-  context: { params: { testStepId: string } }
+  context: { params: Promise<{ testStepId: string }> }
 ) {
   try {
-    const testStepId = context.params.testStepId;
+    const { testStepId } = await context.params;
 
     // First check if the test step exists
     const checkQuery = "SELECT id FROM test_steps WHERE id = $1";
@@ -123,4 +123,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-} 
+}
